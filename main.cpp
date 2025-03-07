@@ -163,8 +163,20 @@ int initVariables() {
 	return 0;
 }
 
+void PraseEscape(const char* buffer,int &i) {
+	std::vector<std::string> escapes;
+	std::string fullLine;
+	i++;
+	// Handle esacpe codes
+	if (buffer[i] != '[') {
+		return;
+	}
+}
+
 /* --- MAIN ---- */
 int main(int argc, char **argv) {
+	Color front = white;
+	Color back = cyan;
 	int master_fd, slave_fd;
 	pid_t pid;
 	uint8_t *pixel;
@@ -250,7 +262,7 @@ int main(int argc, char **argv) {
 
 						for (int i = 0; i < len; i++) {
 							if (!hidden) {
-								renderCharacter(column*renderFontWidth, row*renderFontHeight, white, black, buffer[i]);
+								renderCharacter(column*renderFontWidth, row*renderFontHeight, white, back, buffer[i]);
 								column++;
 							}
 							if (buffer[i] == '\n' || column >= COL_MAX) {
@@ -259,8 +271,7 @@ int main(int argc, char **argv) {
 							}
 							if (buffer[i] == '\e') {
 								hidden = true;
-							}
-							if (buffer[i] == 'm') {
+								PraseEscape(buffer,i);
 								hidden = false;
 							}
 							if (row >= ROW_MAX) {
