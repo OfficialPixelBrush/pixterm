@@ -7,13 +7,13 @@ struct Color {
 typedef struct Color Color;
 
 /* --- Default Color ---- */
-Color white;
-Color black;
+Color white  = {1.0f, 1.0f, 1.0f};
+Color black  = {0.0f, 0.0f, 0.0f};
 
-Color red;
-Color green;
-Color blue;
+Color red    = {1.0f, 0.0f, 0.0f};
+Color green  = {0.0f, 1.0f, 0.0f};
+Color blue   = {0.0f, 0.0f, 1.0f};
 
-Color yellow;
-Color magenta;
-Color cyan;
+Color yellow = {1.0f, 1.0f, 0.0f};
+Color magenta = {1.0f, 0.0f, 1.0f};
+Color cyan   = {0.0f, 1.0f, 1.0f};

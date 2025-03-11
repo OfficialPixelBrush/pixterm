@@ -6,6 +6,7 @@
 #include <cstring>
 #include <SDL2/SDL.h>
 #include <thread>
+#include <vector>
 
 using std::string;
 using std::to_string;
@@ -13,10 +14,13 @@ using std::to_string;
 #include "font.h"
 #include "color.h"
 
+// Current character
 int row,column = 0;
 #define ROW_MAX 24
 #define COL_MAX 80
 bool hidden = false;
+Color front;
+Color back;
 
 // Utility macros
 #define CHECK_ERROR(test, message) \
@@ -131,52 +135,92 @@ void scrollScreen(int rows) {
 	row-=rows;
 }
 
-int initVariables() {
-	printf("Init Default Vars...\n");
-	
-	white.r = 1.0f;
-	white.g = 1.0f;
-	white.b = 1.0f;
-	black.r = 0.0f;
-	black.g = 0.0f;
-	black.b = 0.0f;
-	
-	red.r = 1.0f;
-	red.g = 0.0f;
-	red.b = 0.0f;
-	green.r = 0.0f;
-	green.g = 1.0f;
-	green.b = 0.0f;
-	blue.r = 0.0f;
-	blue.g = 0.0f;
-	blue.b = 1.0f;
-	
-	yellow.r = 1.0f;
-	yellow.g = 1.0f;
-	yellow.b = 0.0f;
-	magenta.r = 1.0f;
-	magenta.g = 0.0f;
-	magenta.b = 1.0f;
-	cyan.r = 0.0f;
-	cyan.g = 1.0f;
-	cyan.b = 1.0f;
-	return 0;
-}
-
 void PraseEscape(const char* buffer,int &i) {
+	// We read the entire escape sequence into fullLine
 	std::vector<std::string> escapes;
-	std::string fullLine;
+	std::string currentLine = "";
+	std::cout << std::hex;
+	bool reading = true;
+	// Skip over the escape character
 	i++;
-	// Handle esacpe codes
-	if (buffer[i] != '[') {
-		return;
+	if (buffer[i] == '[') {
+		i++;
 	}
+
+	while (reading) {
+		switch (buffer[i]) {
+			case ';':
+				escapes.push_back(currentLine);
+				currentLine = "";
+				break;
+			case 'm':
+				escapes.push_back(currentLine);
+				reading = false;
+				break;
+			default:
+				currentLine += buffer[i];
+				break;
+		}
+		i++;
+	}
+
+	// Ensure the last value is stored if it ends with 'm'
+	if (!currentLine.empty()) {
+		escapes.push_back(currentLine);
+	}
+
+	for (auto e : escapes) {
+		int code = 0;
+		// Check if number
+		try {
+			code = std::stoi(e);
+		} catch (const std::exception &except) {
+			code = -1;
+			for (auto c : e) {
+				std::cout << (int)c << "\t->" << c << std::endl;
+			}
+			std::cout << std::dec << code << std::endl;
+		}
+		if (code > -1) {
+			switch(code) {
+				// Reset
+				case 0: front = white; back = black; break;
+				// Style
+				case 1: break;
+				// Front
+				case 30: front = black; break;
+				case 31: front = red; break;
+				case 32: front = green; break;
+				case 33: front = yellow; break;
+				case 34: front = blue; break;
+				case 35: front = magenta; break;
+				case 36: front = cyan; break;
+				case 37: front = white; break;
+				case 39: front = white; break;
+				// Back
+				case 40: back = black; break;
+				case 41: back = red; break;
+				case 42: back = green; break;
+				case 43: back = yellow; break;
+				case 44: back = blue; break;
+				case 45: back = magenta; break;
+				case 46: back = cyan; break;
+				case 47: back = white; break;
+				case 49: back = white; break;
+				default: 
+					for (auto c : e) {
+						std::cout << (int)c << "\t->" << c << std::endl;
+					}
+					std::cout << std::dec << code << std::endl;
+					break;
+			}
+		}
+	}
+	return;
 }
 
 /* --- MAIN ---- */
 int main(int argc, char **argv) {
-	Color front = white;
-	Color back = cyan;
 	int master_fd, slave_fd;
 	pid_t pid;
 	uint8_t *pixel;
@@ -209,10 +253,12 @@ int main(int argc, char **argv) {
 		WINDOW_WIDTH,
 		WINDOW_HEIGHT
 	);
-	initVariables();
+	
+	// Init colors
+	front = white;
+	back = black;
 
 	SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch);
-	renderCharacter(0, 0, white, black, 'A');
 	SDL_UnlockTexture(texture);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
@@ -257,12 +303,12 @@ int main(int argc, char **argv) {
                     ssize_t len = read(master_fd, buffer, sizeof(buffer) - 1);
                     if (len > 0) {
                         buffer[len] = '\0';
-                        std::cout << buffer << std::flush;
+                        //std::cout << buffer << std::flush;
 						string dateTimeString = "Built on " + (string)__TIMESTAMP__;
 
 						for (int i = 0; i < len; i++) {
 							if (!hidden) {
-								renderCharacter(column*renderFontWidth, row*renderFontHeight, white, back, buffer[i]);
+								renderCharacter(column*renderFontWidth, row*renderFontHeight, front, back, buffer[i]);
 								column++;
 							}
 							if (buffer[i] == '\n' || column >= COL_MAX) {
